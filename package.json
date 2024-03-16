@@ -1,0 +1,18 @@
+{
+  "name": "chai-backend",
+  "version": "1.0.0",
+  "description": "Learning Backend Development",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "author": "Nitin Patil",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
