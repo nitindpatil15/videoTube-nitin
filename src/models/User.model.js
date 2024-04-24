@@ -63,31 +63,60 @@ UserSchema.methods.isCorrectPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-UserSchema.methods.generateAccessToken = function () {
-  jwt.sign(
-    {
-      _id: this._id,
+// UserSchema.methods.generateAccessToken = function () {
+//   jwt.sign(
+//     {
+//       _id: this._id,
+//       email: this.email,
+//       username: this.username,
+//       fullName: this.fullName,
+//     },
+//     process.env.ACCESS_TOKEN_SECRET,
+//     {
+//       expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+//     }
+//   );
+// };
+// UserSchema.methods.generateRefreshToken = function () {
+//   jwt.sign(
+//     {
+//       _id: this._id,
+//     },
+//     process.env.REFRESH_TOKEN_SECRET,
+//     {
+//       expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+//     }
+//   );
+// };
+
+
+
+// Method to generate an access token for the user
+UserSchema.methods.generateAccessToken = function() {
+  // Define the payload for the access token
+  const payload = {
+    _id: this._id,
       email: this.email,
       username: this.username,
       fullName: this.fullName,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-    }
-  );
-};
-UserSchema.methods.generateRefreshToken = function () {
-  jwt.sign(
-    {
-      _id: this._id,
-    },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
-  );
+    // Add any other relevant claims
+  };
+
+  // Sign the access token using a secret key
+  const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '60m' }); // Adjust expiry as needed
+
+  return accessToken;
 };
 
+// Method to generate a refresh token for the user
+UserSchema.methods.generateRefreshToken = function() {
+  // Generate a random string for the refresh token
+  const payload = {
+    _id: this._id
+  };
+  const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET); 
+
+  return refreshToken;
+};
 const User = mongoose.model("User", UserSchema);
 export default User

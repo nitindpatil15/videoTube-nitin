@@ -3,21 +3,25 @@ import { ApiError } from "../utils/ApiError.js";
 import user from "../models/User.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
+import bcrypt from "bcrypt";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
-    const User = user.findById(userId);
-    const accessToken = User.generateAccessToken();
-    const refreshToken = User.generateRefreshToken();
+    const UserToken = await user.findById(userId);
+    const accessToken = UserToken.generateAccessToken();
+    const refreshToken = UserToken.generateRefreshToken();
+    console.log("generated accessToken: ",accessToken)
+    console.log("generated refreshToken: ",refreshToken)
 
-    User.refreshToken = refreshToken;
-    await User.save({ validateBeforeSave: false });
+    UserToken.refreshToken = refreshToken;
+    await UserToken.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
   } catch (error) {
     throw new ApiError(500, "Something went wrong  while generating tokens");
   }
 };
+
 
 const registerUser = asynchandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
@@ -105,31 +109,38 @@ const loginUser = asynchandler(async (req, res) => {
   // password check
   // access and refresh token
   // send cookies
-  const { username, email, password } = req.body;
-
-  if (!username || !email) {
-    throw new ApiError(400, "Username/Email is required");
+  const { email, username, password } = req.body;
+  // console.log(req.body);
+  // if (!(username || email)) {
+  if (!username && !email) {
+    throw new ApiError(400, "Username and Email is required");
   }
 
-  const UserDetail = user.findOne({
+  const UserDetail = await user.findOne({
     $or: [{ username }, { email }],
   });
-
+  // console.log(UserDetail);
   if (!UserDetail) {
     throw new ApiError(403, "Invalid Credentials");
   }
 
   // Password validating
-  const passwordValidate = await UserDetail.isPasswordCorrect(password);
+  // const isPasswordValid = await UserDetail.isPasswordCorrect(password,UserDetail.password)
 
-  if (!passwordValidate) {
-    throw new ApiError(403, "Invalid Password");
+  // if (!isPasswordValid) {
+  //   throw new ApiError(403, "Invalid Password");
+  // }
+  const passwordCompare = await bcrypt.compare(password, UserDetail.password);
+  if (!passwordCompare) {
+    success = false;
+    return res
+      .status(400)
+      .json({ success, error: "Please try to login with correct credentials" });
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     UserDetail._id
   );
-
   const loggedUser = await user
     .findById(UserDetail._id)
     .select("-password -refreshToken");
@@ -148,39 +159,41 @@ const loginUser = asynchandler(async (req, res) => {
         200,
         {
           UserDetail: loggedUser,
-          accessToken,
-          refreshToken,
+          accessToken:accessToken,
+          refreshToken: refreshToken,
         },
         "User Logged Successfully"
       )
     );
 });
 
-const logoutUser = asynchandler(async(req,res)=>{
-  await user.findByIdAndUpdate(
-    req.user._id,
-    {
+const logoutUser = asynchandler(async (req, res) => {
+  try {
+    await user.findByIdAndUpdate(
+      req.user._id,
+      {
         $set: {
-          refreshToken:undefined
+          refreshToken: undefined,
         },
-    },{
-      new:true
-    }
-  )
+      },
+      {
+        new: true,
+      }
+    );
 
-  const options={
-    httpOnly:true,
-    secure:true
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    return res
+      .status(200)
+      .clearCookie("accessToken", options)
+      .clearCookie("refreshToken", options)
+      .json(200, {}, console.log("User Logged Out Successfully"));
+  } catch (error) {
+    throw new ApiError(500, "Internal Server Error");
   }
+});
 
-  return res.status(200)
-  .clearCookie(accessToken,options)
-  .clearCookie(refreshToken,options)
-  .json(200,{},"User Logged Out Successfully")
-})
-
-export { 
-  registerUser,
-   loginUser,
-   logoutUser ,
-   };
+export { registerUser, loginUser, logoutUser };
