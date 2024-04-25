@@ -10,8 +10,8 @@ const generateAccessAndRefreshToken = async (userId) => {
     const UserToken = await user.findById(userId);
     const accessToken = UserToken.generateAccessToken();
     const refreshToken = UserToken.generateRefreshToken();
-    console.log("generated accessToken: ",accessToken)
-    console.log("generated refreshToken: ",refreshToken)
+    console.log("generated accessToken: ", accessToken);
+    console.log("generated refreshToken: ", refreshToken);
 
     UserToken.refreshToken = refreshToken;
     await UserToken.save({ validateBeforeSave: false });
@@ -21,7 +21,6 @@ const generateAccessAndRefreshToken = async (userId) => {
     throw new ApiError(500, "Something went wrong  while generating tokens");
   }
 };
-
 
 const registerUser = asynchandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
@@ -159,7 +158,7 @@ const loginUser = asynchandler(async (req, res) => {
         200,
         {
           UserDetail: loggedUser,
-          accessToken:accessToken,
+          accessToken: accessToken,
           refreshToken: refreshToken,
         },
         "User Logged Successfully"
@@ -196,4 +195,53 @@ const logoutUser = asynchandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser };
+const refreshAccessToken = async (req, res) => {
+  try {
+    const incomingAccessToken =
+      req.cookies.refreshToken || req.body.refreshToken;
+
+    if (!incomingAccessToken) {
+      throw new ApiError(401, "Invalid Token");
+    }
+
+    const decodedToken = jwt.verify(
+      incomingAccessToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const User = await user.findById(decodedToken._id);
+
+    if (!User) {
+      throw new ApiError(404, "Invalid Refresh Token");
+    }
+
+    if (incomingAccessToken !== User?.refreshtoken) {
+      throw new ApiError(401, "Refresh Token is Expired or used");
+    }
+
+    const option = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshToken(User._id);
+
+    return res
+      .status(200)
+      .cookie("AccessToken", accessToken, option)
+      .cookie("RefreshToken", newRefreshToken, option)
+      .json(
+        new ApiResponce(
+          200,
+          { accessToken, newRefreshToken },
+          "Access Token refreshed"
+          .console.log("Access token has been refreshed")
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, "Session Timeout Please Login Again");
+  }
+};
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken };
