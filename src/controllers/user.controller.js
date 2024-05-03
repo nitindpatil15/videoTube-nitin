@@ -356,6 +356,75 @@ const updateCoverImage = asynchandler(async (req, res) => {
     .json(new ApiResponce(200, User , "CoverImage Upload Successfully"));
 });
 
+const getUserChannelProfile = asynchandler(async (req,rej)=>{
+  const {username} = req.params
+  if(!username?.trim){
+    throw new ApiError(401,"Username is missing!!")
+  }
+
+  const channel = await user.aggregate([
+    {
+      $match:{
+        usernmae:username?.toLowerCase()
+      }
+    },
+    {
+      $lookup :{
+        from:"sunbscriptions",
+        localField:"_id",
+        foreignField:"channel",
+        as:"Subscribers"
+      }
+    },
+    {
+      $lookup :{
+        from:"sunbscriptions",
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"SubscribeTo"
+      }
+    },
+    {
+      $addFields:{
+        subscribersCounter:{
+          $size: "$subscribers"
+        },
+        subscribeToCounter:{
+          $size: "$subscribeTo"
+        },
+        isSubscribed:{
+          $cond:{
+            if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+            then:true,
+            else:false
+          }
+        }
+      }
+
+    },
+    {
+      $project:{
+        fullname:1,
+        username:1,
+        subscribersCounter:1,
+        subscribeToCounter:1,
+        isSubscribed:1,
+        avatar:1,
+        coverImage:1,
+        email:1
+      }
+    }
+  ])
+
+  if(!channel?.length){
+    throw new ApiError(402,"Channel is not exists")
+  }
+
+  return res
+  .status(200)
+  .json(200,channel[0],"User Channel fetched Successfully")
+})
+   
 export {
   registerUser,
   loginUser,
