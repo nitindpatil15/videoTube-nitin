@@ -143,7 +143,7 @@ const loginUser = asynchandler(async (req, res) => {
   );
   const loggedUser = await user
     .findById(UserDetail._id)
-    .select("-password -refreshToken");
+    .select("-password ");
 
   const option = {
     httpOnly: true,
@@ -172,8 +172,8 @@ const logoutUser = asynchandler(async (req, res) => {
     await user.findByIdAndUpdate(
       req.user._id,
       {
-        $set: {
-          refreshToken: undefined,
+        $unset: {
+          refreshToken: 1, // this removes the field from document
         },
       },
       {
@@ -190,7 +190,7 @@ const logoutUser = asynchandler(async (req, res) => {
       .status(200)
       .clearCookie("accessToken", options)
       .clearCookie("refreshToken", options)
-      .json(200, {}, console.log("User Logged Out Successfully"));
+      .json(new ApiResponce(200, {},"User Logged Out Successfully"));
   } catch (error) {
     throw new ApiError(500, "Internal Server Error");
   }
@@ -249,16 +249,15 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 const changeUserPassword = asynchandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
-  const userforPasswordChange = user.findById(req.user?._id);
+  const User = user.findById(req.user?._id);
 
-  const isPasswordCorrect =
-    await userforPasswordChange.isPasswordCorrect(oldPassword);
+  const isPasswordCorrect = await User.isCorrectPassword(oldPassword);
   if (!isPasswordCorrect) {
     throw new ApiError(400, "Invalid OldPassword");
   }
 
-  userforPasswordChange.password = newPassword;
-  await userforPasswordChange.save({ validateBeforeSave: false });
+  User.password = newPassword;
+  await User.save({ validateBeforeSave: false });
 
   return res
     .status(200)
@@ -324,7 +323,7 @@ const updateAvatar = asynchandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponce(200, User , "Avatar Upload Successfully"));
+    .json(new ApiResponce(200, User, "Avatar Upload Successfully"));
 });
 
 const updateCoverImage = asynchandler(async (req, res) => {
@@ -354,124 +353,129 @@ const updateCoverImage = asynchandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponce(200, User , "CoverImage Upload Successfully"));
+    .json(new ApiResponce(200, User, "CoverImage Upload Successfully"));
 });
 
-const getUserChannelProfile = asynchandler(async (req,res)=>{
-  const {username} = req.params
-  if(!username?.trim){
-    throw new ApiError(401,"Username is missing!!")
+const getUserChannelProfile = asynchandler(async (req, res) => {
+  const { username } = req.params;
+  if (!username?.trim) {
+    throw new ApiError(401, "Username is missing!!");
   }
 
   const channel = await user.aggregate([
     {
-      $match:{
-        username:username?.toLowerCase()
-      }
+      $match: {
+        username: username?.toLowerCase(),
+      },
     },
     {
-      $lookup :{
-        from:"sunbscriptions",
-        localField:"_id",
-        foreignField:"channel",
-        as:"Subscribers"
-      }
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "Subscribers",
+      },
     },
     {
-      $lookup :{
-        from:"sunbscriptions",
-        localField:"_id",
-        foreignField:"subscriber",
-        as:"SubscribeTo"
-      }
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "SubscribeTo",
+      },
     },
     {
-      $addFields:{
-        subscribersCounter:{
-          $size: "$subscribers"
+      $addFields: {
+        subscribersCounter: {
+          $size: "$Subscribers",
         },
-        subscribeToCounter:{
-          $size: "$subscribeTo"
+        subscribeToCounter: {
+          $size: "$SubscribeTo",
         },
-        isSubscribed:{
-          $cond:{
-            if:{$in:[req.user?._id,"$subscribers.subscriber"]},
-            then:true,
-            else:false
-          }
-        }
-      }
-
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$Subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
     },
     {
-      $project:{
-        fullname:1,
-        username:1,
-        subscribersCounter:1,
-        subscribeToCounter:1,
-        isSubscribed:1, // for subscribe button 
-        avatar:1,
-        coverImage:1,
-        email:1
-      }
-    }
-  ])
+      $project: {
+        fullname: 1,
+        username: 1,
+        subscribersCounter: 1,
+        subscribeToCounter: 1,
+        isSubscribed: 1, // for subscribe button
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
 
-  if(!channel?.length){
-    throw new ApiError(402,"Channel is not exists")
+  if (!channel?.length) {
+    throw new ApiError(402, "Channel is not exists");
   }
 
   return res
-  .status(200)
-  .json(200,channel[0],"User Channel fetched Successfully")
-})
-   
-const getUserWatchHistory = asynchandler(async (req,res)=>{
+    .status(200)
+    .json(new ApiResponce(200, channel[0], "User Channel fetched Successfully"));
+});
 
+const getUserWatchHistory = asynchandler(async (req, res) => {
   const User = await user.aggregate([
     {
-      $match:{
-        _id : new mongoose.Types.ObjectId('req.user._id')
-      }
+      $match: {
+        _id: new mongoose.Types.ObjectId("User._id"),
+      },
     },
     {
-      $lookup:{
-        from:"videos",
-        localField:"watchHistory",
-        foreignField:"_id",
-        as:"watchHistory",
-        pipeline:[
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
           {
-            $lookup:{
-              from:"users",
+            $lookup: {
+              from: "users",
               localField: "owner",
-              foreignField:"_id",
-              as:"owner",
-              pipeline:[
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
                 {
-                  $project:{
-                    fullName:1,
-                    username:1,
-                    avatar:1
-                  }
-                }
-              ]
-            }
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
           },
           {
-            $addFields:{
-              owner:{
-                $first:"$owner"
-              }
-            }
-          }
-        ]
-      }
-    }
-  ])
-  return res.status(200)
-  .json(new ApiResponce(200,User[0].watchHistory,"Watch History fetch Successfully"))
-})
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+  return res
+    .status(200)
+    .json(
+      new ApiResponce(
+        200,
+        User[0].watchHistory,
+        "Watch History fetched Successfully"
+      )
+    );
+});
 
 export {
   registerUser,
