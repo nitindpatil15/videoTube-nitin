@@ -7,8 +7,8 @@ import {
     togglePublishStatus,
     updateVideo,
 } from "../controllers/video.controller.js"
-import {verifyJWT} from "../middlewares/auth.middleware.js"
-import {upload} from "../middlewares/multer.middleware.js"
+import verifyJWT from "../middleware/auth.middleware.js";
+import {upload}  from "../middleware/multer.middleware.js";
 
 const router = Router();
 router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
@@ -19,7 +19,7 @@ router
     .post(
         upload.fields([
             {
-                name: "videoFile",
+                name: "Video",
                 maxCount: 1,
             },
             {
