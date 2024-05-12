@@ -27,9 +27,9 @@ const UserSchema = new Schema(
     },
     avatar: {
       type: String, // cause it 's a url
-      // required: true,
+      required: true,
     },
-    coverimage: {
+    coverImage: {
       type: String, // cause it 's a url
     },
     watchhistory: [
@@ -59,7 +59,7 @@ UserSchema.pre("save", async function (next) {
 });
 
 // for checking password isCorect?
-UserSchema.methods.isCorrectPassword = async function (password) {
+UserSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 

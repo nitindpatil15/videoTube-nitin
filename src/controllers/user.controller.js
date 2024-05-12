@@ -55,9 +55,9 @@ const registerUser = asynchandler(async (req, res) => {
     avatarLocalpath = req.files.avatar[0].path;
   }
 
-  // if (!avatarLocalpath) {
-  //   throw new ApiError(400, "Avatar is Required");
-  // }
+  if (!avatarLocalpath) {
+    throw new ApiError(400, "Avatar is Required");
+  }
 
   let coverImageLocalpath;
   if (
@@ -72,14 +72,14 @@ const registerUser = asynchandler(async (req, res) => {
   const avatar = await uploadOnCloudinary(avatarLocalpath);
   const coverImage = await uploadOnCloudinary(coverImageLocalpath);
 
-  // if (!avatar) {
-  //   throw new ApiError(500, "Failed to Upload Image On Server");
-  // }
+  if (!avatar) {
+    throw new ApiError(500, "Failed to Upload Image On Server");
+  }
 
   // User object
   const User = await user.create({
     fullName,
-    avatar: avatar?.url || "",
+    avatar: avatar?.url,
     coverImage: coverImage?.url || "",
     password,
     username,
@@ -99,7 +99,7 @@ const registerUser = asynchandler(async (req, res) => {
   // sending Response to User
   return res
     .status(201)
-    .json(new ApiResponce(200, createdUser, "User Register Successfully"));
+    .json(new ApiResponce(200, User, "User Register Successfully"));
 });
 
 const loginUser = asynchandler(async (req, res) => {
@@ -141,9 +141,7 @@ const loginUser = asynchandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     UserDetail._id
   );
-  const loggedUser = await user
-    .findById(UserDetail._id)
-    .select("-password ");
+  const loggedUser = await user.findById(UserDetail._id).select("-password ");
 
   const option = {
     httpOnly: true,
@@ -190,27 +188,27 @@ const logoutUser = asynchandler(async (req, res) => {
       .status(200)
       .clearCookie("accessToken", options)
       .clearCookie("refreshToken", options)
-      .json(new ApiResponce(200, {},"User Logged Out Successfully"));
+      .json(new ApiResponce(200, {}, "User Logged Out Successfully"));
   } catch (error) {
     throw new ApiError(500, "Internal Server Error");
   }
 });
 
+// To-Do refresh token and password change 
 const refreshAccessToken = asynchandler(async (req, res) => {
+  const incomingAccessToken = req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incomingAccessToken) {
+    throw new ApiError(401, "Unauthorized Token");
+  }
+
   try {
-    const incomingAccessToken =
-      req.cookies.refreshToken || req.body.refreshToken;
-
-    if (!incomingAccessToken) {
-      throw new ApiError(401, "Invalid Token");
-    }
-
     const decodedToken = jwt.verify(
       incomingAccessToken,
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    const User = await user.findById(decodedToken._id);
+    const User = await user.findById(decodedToken?._id);
 
     if (!User) {
       throw new ApiError(404, "Invalid Refresh Token");
@@ -236,9 +234,7 @@ const refreshAccessToken = asynchandler(async (req, res) => {
         new ApiResponce(
           200,
           { accessToken, newRefreshToken },
-          "Access Token refreshed".console.log(
-            "Access token has been refreshed"
-          )
+          "Access Token refreshed"
         )
       );
   } catch (error) {
@@ -251,7 +247,7 @@ const changeUserPassword = asynchandler(async (req, res) => {
 
   const User = user.findById(req.user?._id);
 
-  const isPasswordCorrect = await User.isCorrectPassword(oldPassword);
+  const isPasswordCorrect = await User.isPasswordCorrect(oldPassword);
   if (!isPasswordCorrect) {
     throw new ApiError(400, "Invalid OldPassword");
   }
@@ -421,7 +417,9 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponce(200, channel[0], "User Channel fetched Successfully"));
+    .json(
+      new ApiResponce(200, channel[0], "User Channel fetched Successfully")
+    );
 });
 
 const getUserWatchHistory = asynchandler(async (req, res) => {
