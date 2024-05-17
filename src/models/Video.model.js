@@ -2,13 +2,13 @@ import mongoose ,{Schema} from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const VideoSchema = new Schema({
-    Video: {
+    videodoc: {
         type: String,    //file url
         required: true,
     },
     thumbnail: {
         type: String,   //url
-        // required: true,
+        required: true,
     },
     title: {
         type: String,

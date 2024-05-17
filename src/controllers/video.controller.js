@@ -18,36 +18,56 @@ const publishAVideo = asynchandler(async (req, res) => {
     throw new ApiError(400, "All Fields are Required");
   }
 
-  // const existedUser = await User.findOne({
-  //   $or: [{ email }, { username }],
-  // });
-  // if (existedUser) {
-  //   throw new ApiError(409, "Username or Email already exists.");
-  // }
-
   // TODO: get video, upload to cloudinary, create video
   let videoLocalpath;
   if (
     req.files &&
-    Array.isArray(req.files.Video) &&
-    req.files.Video.length > 0
+    Array.isArray(req.files.videodoc) &&
+    req.files.videodoc.length > 0
   ) {
-    videoLocalpath = req.files.Video[0].path;
+    videoLocalpath = req.files.videodoc[0].path;
   }
 
   if (!videoLocalpath) {
     throw new ApiError(400, "Avatar is Required");
   }
+  let thumbnailLocalpath;
+  if (
+    req.files &&
+    Array.isArray(req.files.thumbnail) &&
+    req.files.thumbnail.length > 0
+  ) {
+    thumbnailLocalpath = req.files.thumbnail[0].path;
+  }
+
+  if (!thumbnailLocalpath) {
+    throw new ApiError(400, "Avatar is Required");
+  }
 
   const video = await uploadOnCloudinary(videoLocalpath)
+  const thumbnai = await uploadOnCloudinary(thumbnailLocalpath)
 
   if(!video){
     throw new ApiError("Failed to Upload Video")
   }
+  if(!thumbnai){
+    throw new ApiError("Failed to Upload Video")
+  }
+
+  const PublishVideo = Video.create({
+    title,
+    description,
+    video:video?.url,
+    thumbnai:thumbnai?.url,
+    duration: video?.duration
+  })
+
+  PublishVideo.owner = req.user?._id
+  PublishVideo.save()
 
   return res
   .status(200)
-  .json(new ApiResponce(200,{},"Video Uploaded Successfully"))
+  .json(new ApiResponce(200,PublishVideo,"Video Uploaded Successfully"))
 });
 
 const getVideoById = asynchandler(async (req, res) => {
