@@ -29,7 +29,7 @@ const publishAVideo = asynchandler(async (req, res) => {
   }
 
   if (!videoLocalpath) {
-    throw new ApiError(400, "Avatar is Required");
+    throw new ApiError(400, "videoLocalpaths is Required");
   }
   let thumbnailLocalpath;
   if (
@@ -41,38 +41,44 @@ const publishAVideo = asynchandler(async (req, res) => {
   }
 
   if (!thumbnailLocalpath) {
-    throw new ApiError(400, "Avatar is Required");
+    throw new ApiError(400, "thumbnailLocalpath is Required");
   }
 
   const video = await uploadOnCloudinary(videoLocalpath)
-  const thumbnai = await uploadOnCloudinary(thumbnailLocalpath)
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalpath)
 
   if(!video){
     throw new ApiError("Failed to Upload Video")
   }
-  if(!thumbnai){
+  if(!thumbnail){
     throw new ApiError("Failed to Upload Video")
   }
 
-  const PublishVideo = Video.create({
+  const createVideo = await Video.create({
+    videodoc:video?.url,
+    thumbnail: thumbnail?.url,
     title,
     description,
-    video:video?.url,
-    thumbnai:thumbnai?.url,
-    duration: video?.duration
+    duration:video?.duration
   })
+  
+  createVideo.owner = req.user?._id
+  createVideo.save()
 
-  PublishVideo.owner = req.user?._id
-  PublishVideo.save()
+  console.log(createVideo)
 
   return res
-  .status(200)
-  .json(new ApiResponce(200,PublishVideo,"Video Uploaded Successfully"))
-});
+    .status(200)
+    .json(new ApiResponce(200, createVideo, "Video Uploaded Successfully"));});
 
 const getVideoById = asynchandler(async (req, res) => {
-  const { videoId } = req.params;
+  const { _id } = req.params;
   //TODO: get video by id
+
+  const video = await Video.findById(_id)
+
+  return res.status(200)
+  .json(new ApiResponce(200, video,"Video fetched by videoId"))
 });
 
 const updateVideo = asynchandler(async (req, res) => {
