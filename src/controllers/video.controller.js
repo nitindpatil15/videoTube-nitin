@@ -77,7 +77,7 @@ const publishAVideo = asynchandler(async (req, res) => {
 });
 
 const getVideoById = asynchandler(async (req, res) => {
-  const { _id } = req.body;
+  const { _id } = req.params;
   //TODO: change field req position
 
   const videoById = await Video.findById(_id);
