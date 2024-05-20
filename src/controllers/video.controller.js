@@ -7,8 +7,36 @@ import { asynchandler } from "../utils/asynchandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asynchandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  const { page = 1, limit = 10, query, sortBy, sortType, owner } = req.query;
   //TODO: get all videos based on query, sort, pagination
+  let sortCriteria = {}
+    let videoQuery = {}
+
+    if (owner) {
+        videoQuery.owner = owner
+    }
+
+    if (query) {
+        videoQuery.$or = [
+            { title: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } }
+        ]
+    }
+    
+    if (sortBy && sortType) {
+        sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
+    }
+    
+    const videos = await Video.find(videoQuery)
+    .sort(sortCriteria)
+    .skip((page - 1) * limit)
+    .limit(limit);
+    
+    if (!videos) {
+        throw new ApiError(400, "error while fetching all videos")
+    }
+    
+    return res.status(200).json(new ApiResponce(200, videos, "videos fetched"))
 });
 
 const publishAVideo = asynchandler(async (req, res) => {
@@ -77,7 +105,7 @@ const publishAVideo = asynchandler(async (req, res) => {
 });
 
 const getVideoById = asynchandler(async (req, res) => {
-  const { _id } = req.params;
+  const { _id } = req.body;
   //TODO: change field req position
 
   const videoById = await Video.findById(_id);
