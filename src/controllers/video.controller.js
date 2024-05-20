@@ -40,7 +40,7 @@ const getAllVideos = asynchandler(async (req, res) => {
 });
 
 const publishAVideo = asynchandler(async (req, res) => {
-  // try {
+  try {
     const { title, description } = req.body;
 
     if ([title, description].some((field) => field?.trim() === "")) {
@@ -99,104 +99,125 @@ const publishAVideo = asynchandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponce(200, createVideo, "Video Uploaded Successfully"));
-  // } catch (error) {
-    // throw new ApiError("something goes wrong ! try again after sometime");
-  // }
+  } catch (error) {
+    throw new ApiError("something goes wrong ! try again after sometime");
+  }
 });
 
 const getVideoById = asynchandler(async (req, res) => {
-  const { _id } = req.body;
-  //TODO: change field req position
-
-  const videoById = await Video.findById(_id);
-
-  if (!videoById) {
-    throw new ApiError("Error while fetching video");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponce(200, videoById, "Video fetched by videoId"));
+ try {
+   const { _id } = req.query;
+   //TODO: change field req position
+ 
+   const videoById = await Video.findById(_id);
+ 
+   if (!videoById) {
+     throw new ApiError("Error while fetching video");
+   }
+ 
+   return res
+     .status(200)
+     .json(new ApiResponce(200, videoById, "Video fetched by videoId"));
+ } catch (error) {
+  throw new ApiError(500,"Error in fetching video by Id")
+ }
 });
 
 const updateVideo = asynchandler(async (req, res) => {
-  const { _id } = req.params;
-  const { title, description } = req.body;
-
-  if (!_id) {
-    throw new ApiError("Id is required");
-  }
-  if (!title && !description) {
-    throw new ApiError("Title and Description are required");
-  }
-
-  const thumbnailpath = req.files?.path;
-  if (!thumbnailpath) {
-    throw new ApiError("Thumbnail is required");
-  }
-
-  const thumbnail = uploadOnCloudinary(thumbnailpath);
-  if (!thumbnail) {
-    throw new ApiError("Thumbnail is required");
-  }
-
-  const videoUpdate = await Video.findByIdAndUpdate(
-    _id,
-    {
-      title,
-      description,
-      thumbnail: thumbnail?.path,
-    },
-    {
-      new: true,
+  try {
+    const {_id} = req.query;
+    const { title, description } = req.body;
+  
+    if (!_id) {
+      throw new ApiError("Id is required");
     }
-  );
-
-  if (!videoUpdate) {
-    throw new ApiError("Server Error try later!");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponce(200, {}, "Video Details updated successfully!"));
-});
+    if (!title && !description) {
+      throw new ApiError("Title and Description are required");
+    }
+  
+    let thumbnailLocalpath;
+      if (
+        req.files &&
+        Array.isArray(req.files.thumbnail) &&
+        req.files.thumbnail.length > 0
+      ) {
+        thumbnailLocalpath = req.files.thumbnail[0].path;
+      }
+  
+    const thumbnail = uploadOnCloudinary(thumbnailLocalpath);
+    if (!thumbnail) {
+      throw new ApiError("Thumbnail is required");
+    }
+  
+    const videoUpdate = await Video.findByIdAndUpdate(
+      _id,
+      {
+        title,
+        description,
+        thumbnail: thumbnail?.path,
+      },
+      {
+        new: true,
+      }
+    );
+  
+    if (!videoUpdate) {
+      throw new ApiError("Server Error try later!");
+    }
+  
+    return res
+      .status(200)
+      .json(new ApiResponce(200, {videoUpdate}, "Video Details updated successfully!"));
+  
+  } catch (error) {
+    throw new ApiError(500,"Error in Updating Video")
+  }});
 
 const deleteVideo = asynchandler(async (req, res) => {
-  const { _id } = req.params;
-
-  if (!_id) {
-    throw new ApiError("Id is required");
-  }
-
-  const removevideo = await Video.findByIdAndDelete(_id);
-
-  if(!removevideo){
-    throw new ApiError("Invalid Id please check it or try again!!")
-  }
-
-  return removevideo.status(200)
-  .json(new ApiResponce(200,removevideo,"Video Deleted Successfully!!"))
+  try {
+    const { _id } = req.query;
   
+    if (!_id) {
+      throw new ApiError("Id is required");
+    }
+  
+    const removevideo = await Video.findByIdAndDelete(_id);
+  
+    if(!removevideo){
+      throw new ApiError("Invalid Id please check it or try again!!")
+    }
+  
+    return res.status(200)
+    .json(new ApiResponce(200,removevideo,"Video Deleted Successfully!!"))
+    
+  } catch (error) {
+    throw new ApiError(500,"Error in Deleting Video")
+
+  }
 });
 
 const togglePublishStatus = asynchandler(async (req, res) => {
-  const { _id } = req.params;
-
-  if(!_id){
-    throw new ApiError("Select proper video")
+  try {
+    const { _id } = req.query;
+  
+    if(!_id){
+      throw new ApiError("Select proper video")
+    }
+  
+    const statustoggle = await Video.findById(_id)
+  
+    if(!statustoggle){
+      throw new ApiError("Select proper Id")
+    }
+  
+    statustoggle.isPublished = !statustoggle.isPublished;
+    statustoggle.save();
+  
+    return res.status(200)
+    .json(new ApiResponce(200,statustoggle,"Updated"))
+  } catch (error) {
+    throw new ApiError(500,"Error in Toggle Video")
   }
-
-  const statustoggle = await Video.findById(_id)
-
-  if(!statustoggle){
-    throw new ApiError("Select proper Id")
-  }
-
-  statustoggle.isPublished = !statustoggle.isPublished;
-  statustoggle.save();
-
-  return res.status(200)
-  .json(new ApiResponce(200,statustoggle,"Updated"))
 });
 
 export {
