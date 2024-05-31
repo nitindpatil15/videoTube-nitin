@@ -28,12 +28,20 @@ const toggleVideoLike = asynchandler(async (req, res) => {
       const newLike = await Like.create({ video: _id, likedBy: userId });
       await Video.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
 
+      if(!newLike){
+        throw new ApiError(401, "like not created")
+      }
       return res
         .status(200)
         .json(new ApiResponce(200, newLike, "Liked a video!"));
     } else {
       const removelike = await Like.findOneAndDelete(condition);
       await Video.findByIdAndUpdate(_id, { $inc: { likes: -1 } });
+
+      if(!removelike){
+        throw new ApiError(401, "like not Removed")
+      }
+
       return res
         .status(200)
         .json(new ApiResponce(200, removelike, "unliked a video"));
@@ -57,6 +65,9 @@ const toggleCommentLike = asynchandler(async (req, res) => {
   if(!like){
     const newlike = await Like.create({ likedBy: userId, comment: _id });
     await Comment.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
+    if(!newlike){
+      throw new ApiError(401, "like not Created")
+    }
 
     return res.status(200)
     .json(new ApiResponce(200,newlike,"Liked a Comment"))
@@ -64,6 +75,10 @@ const toggleCommentLike = asynchandler(async (req, res) => {
   else{
     const removelike = await Like.findOneAndDelete(condition)
     await Comment.findByIdAndUpdate(_id,{$inc:{likes:-1}})
+
+    if(!removelike){
+      throw new ApiError(401, "like not Removed")
+    }
 
     return res.status(200)
     .json(new ApiResponce(200,removelike,"Unliked a Comment"))
@@ -82,12 +97,19 @@ const toggleTweetLike = asynchandler(async (req, res) => {
     const newlike = await Like.create({ likedBy: userId, tweet: _id });
     await Tweet.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
 
+    if(!newlike){
+      throw new ApiError(401, "like not Created")
+    }
+
     return res
       .status(200)
       .json(new ApiResponce(200, newlike, "Liked a comment!"));
   } else {
     const removelike = await Like.findOneAndDelete(condition);
     await Tweet.findByIdAndUpdate(_id, { $inc: { likes: -1 } });
+    if(!removelike){
+      throw new ApiError(401, "like not Removed")
+    }
 
     return res
       .status(200)
