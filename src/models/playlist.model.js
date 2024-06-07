@@ -14,7 +14,7 @@ const playlistSchema = new Schema({
         ref:"Video"                   // Reference
     }],
     owner:{
-        type:Schema.Types.ObjectId,  // Array of video Ids
+        type:Schema.Types.ObjectId,  // Array of user Ids
         ref:"User"                   // Reference
     }
 }, { timestamps: true });
