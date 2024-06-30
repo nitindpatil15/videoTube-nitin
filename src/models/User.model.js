@@ -42,6 +42,12 @@ const UserSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
     },
+    playlist: [
+      {
+        type: Schema.Types.ObjectId,
+        ref:"playlist"
+      }
+    ],
     refreshtoken: {
       type: String,
     },

@@ -3,6 +3,7 @@ import { playlist } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import { asynchandler } from "../utils/asynchandler.js";
+import User from "../models/User.model.js";
 
 const createPlaylist = asynchandler(async (req, res) => {
   const { name, description } = req.body;
@@ -27,15 +28,13 @@ const createPlaylist = asynchandler(async (req, res) => {
 });
 
 const getUserPlaylists = asynchandler(async (req, res) => {
-  const {userId} = req.params;
+  const {userId,playlistId} = req.query;
   if(!userId){
     throw new ApiError(401,"userId is required!")
   }
 
-  const userplaylist = await playlist.findById(userId)
-  if(!userplaylist){
-    throw new ApiError(402,"userId is Invalid")
-  }
+  const userplaylist = await User.findById(userId)
+   await playlist.findById(playlistId)
 
   return res.status(200)
   .json(new ApiResponce(200,userplaylist,"Succeffully fetched user playlists"))
@@ -86,17 +85,60 @@ const addVideoToPlaylist = asynchandler(async (req, res) => {
 const removeVideoFromPlaylist = asynchandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
   // TODO: remove video from playlist
+  if (!(playlistId && videoId)) {
+    throw new ApiError(401,"Video and playlist id is required!!!")
+  }
+  const isplaylist = await playlist.findById(playlistId);
+  
 });
 
 const deletePlaylist = asynchandler(async (req, res) => {
-  const { playlistId } = req.params;
-  // TODO: delete playlist
+  try {
+    const { playlistId } = req.query;
+    
+    if(!playlistId){
+      throw new ApiError(401,"Playlist Id is required!!!")
+    }
+    const isplaylist = await playlist.findByIdAndDelete(playlistId);
+    if(!isplaylist){
+      throw new ApiError(401,"Invalid Playlist!!!")
+    }
+  
+    return res.status(200)
+    .json(new ApiResponce(200,isplaylist,"Deleted the Playlist Successfully"))
+  
+  } catch (error) {
+    throw new ApiError(500,"Server Error! , Try Again...")
+  }
+
 });
 
 const updatePlaylist = asynchandler(async (req, res) => {
-  const { playlistId } = req.params;
+  const { playlistId } = req.query;
   const { name, description } = req.body;
   //TODO: update playlist
+
+  if(!playlistId){
+    throw new ApiError(401,"PlaylistId is  required!!!")
+  }
+  if(!name && !description){
+    throw new ApiError(401,"all Fields are required!!!")
+  }
+  
+  const updateplaylist = await playlist.findByIdAndUpdate(playlistId,
+    {
+      $set:{
+        name:name,
+        description:description
+      },
+    },
+  {
+    new : true
+  }
+  )
+
+  return res.status(200)
+  .json(new ApiResponce(200,updateplaylist,"Playlist Updated Successfully"))
 });
 
 export {
