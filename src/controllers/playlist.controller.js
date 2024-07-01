@@ -28,16 +28,19 @@ const createPlaylist = asynchandler(async (req, res) => {
 });
 
 const getUserPlaylists = asynchandler(async (req, res) => {
-  const {userId,playlistId} = req.query;
+  const userId = req.user._id
+  // const {playlistId} = req.query;
   if(!userId){
-    throw new ApiError(401,"userId is required!")
+    throw new ApiError(401, "User not found")
   }
+  const userPlaylists = await playlist.find({owner: userId})
+  // if(!playlistId){
+  //   throw new ApiError(401,"playlistId is required!")
+  // }
 
-  const userplaylist = await User.findById(userId)
-   await playlist.findById(playlistId)
 
   return res.status(200)
-  .json(new ApiResponce(200,userplaylist,"Succeffully fetched user playlists"))
+  .json(new ApiResponce(200,userPlaylists,"Succeffully fetched user playlists"))
 });
 
 const getPlaylistById = asynchandler(async (req, res) => {
@@ -88,7 +91,17 @@ const removeVideoFromPlaylist = asynchandler(async (req, res) => {
   if (!(playlistId && videoId)) {
     throw new ApiError(401,"Video and playlist id is required!!!")
   }
+
   const isplaylist = await playlist.findById(playlistId);
+  if(!isplaylist){
+    throw new ApiError(401,"Invalid Playlist")
+  }
+
+  await isplaylist.videos.pull(videoId)
+  const removedvideo = await isplaylist.save();
+
+  return res.status(200)
+  .json(200,removedvideo,"Video Removed from Playlist")
   
 });
 
