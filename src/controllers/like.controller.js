@@ -9,24 +9,24 @@ import { Comment } from "../models/comment.model.js";
 
 const toggleVideoLike = asynchandler(async (req, res) => {
   try {
-    const { _id } = req.query;
-    if (!_id) {
+    const {videoId} = req.params;
+    if (!videoId) {
       throw new ApiError(401, "Invalid id");
     }
 
     const { userId } = req.user?._id;
-    const condition = { likedBy: userId, video: _id };
+    const condition = { likedBy: userId, video: videoId };
 
     const like = await Like.findOne(condition);
 
-    const isvalidvideo = await Video.findById(_id);
+    const isvalidvideo = await Video.findById(videoId);
     if (!isvalidvideo) {
       throw new ApiError(401, "video not found");
     }
 
     if (!like) {
-      const newLike = await Like.create({ video: _id, likedBy: userId });
-      await Video.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
+      const newLike = await Like.create({ video: videoId, likedBy: userId });
+      await Video.findByIdAndUpdate(videoId, { $inc: { likes: +1 } });
 
       if(!newLike){
         throw new ApiError(401, "like not created")
@@ -36,7 +36,7 @@ const toggleVideoLike = asynchandler(async (req, res) => {
         .json(new ApiResponce(200, newLike, "Liked a video!"));
     } else {
       const removelike = await Like.findOneAndDelete(condition);
-      await Video.findByIdAndUpdate(_id, { $inc: { likes: -1 } });
+      await Video.findByIdAndUpdate(videoId, { $inc: { likes: -1 } });
 
       if(!removelike){
         throw new ApiError(401, "like not Removed")
@@ -53,18 +53,18 @@ const toggleVideoLike = asynchandler(async (req, res) => {
 
 // To Do like comment 
 const toggleCommentLike = asynchandler(async (req, res) => {
-  const { _id } = req.query;
-  if(!_id){
+  const { commentId } = req.params;
+  if(!commentId){
     throw new ApiError(401,"Select valid comment!")
   }
 
   const {userId} = req.user?._id;
-  const condition = {likedBy: userId, comment: _id}
+  const condition = {likedBy: userId, comment: commentId}
 
   const like = await Like.findOne(condition)
   if(!like){
-    const newlike = await Like.create({ likedBy: userId, comment: _id });
-    await Comment.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
+    const newlike = await Like.create({ likedBy: userId, comment: commentId });
+    await Comment.findByIdAndUpdate(commentId, { $inc: { likes: +1 } });
     if(!newlike){
       throw new ApiError(401, "like not Created")
     }
@@ -74,7 +74,7 @@ const toggleCommentLike = asynchandler(async (req, res) => {
   }
   else{
     const removelike = await Like.findOneAndDelete(condition)
-    await Comment.findByIdAndUpdate(_id,{$inc:{likes:-1}})
+    await Comment.findByIdAndUpdate(commentId,{$inc:{likes:-1}})
 
     if(!removelike){
       throw new ApiError(401, "like not Removed")
@@ -88,14 +88,14 @@ const toggleCommentLike = asynchandler(async (req, res) => {
 });
 
 const toggleTweetLike = asynchandler(async (req, res) => {
-  const { _id } = req.query;
+  const { tweetId } = req.params;
   const { userId } = req.user?._id;
-  const condition = { likedBy: userId, tweet: _id };
+  const condition = { likedBy: userId, tweet: tweetId };
 
   const like = await Like.findOne(condition);
   if (!like) {
-    const newlike = await Like.create({ likedBy: userId, tweet: _id });
-    await Tweet.findByIdAndUpdate(_id, { $inc: { likes: +1 } });
+    const newlike = await Like.create({ likedBy: userId, tweet: tweetId });
+    await Tweet.findByIdAndUpdate(tweetId, { $inc: { likes: +1 } });
 
     if(!newlike){
       throw new ApiError(401, "like not Created")
@@ -106,7 +106,7 @@ const toggleTweetLike = asynchandler(async (req, res) => {
       .json(new ApiResponce(200, newlike, "Liked a comment!"));
   } else {
     const removelike = await Like.findOneAndDelete(condition);
-    await Tweet.findByIdAndUpdate(_id, { $inc: { likes: -1 } });
+    await Tweet.findByIdAndUpdate(tweetId, { $inc: { likes: -1 } });
     if(!removelike){
       throw new ApiError(401, "like not Removed")
     }

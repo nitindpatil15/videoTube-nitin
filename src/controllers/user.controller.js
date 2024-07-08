@@ -6,6 +6,7 @@ import { ApiResponce } from "../utils/ApiResponse.js";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import {REFRESH_TOKEN_SECRET} from '../constants.js'
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -220,7 +221,7 @@ const refreshAccessToken = asynchandler(async (req, res) => {
   try {
   const decodedToken = jwt.verify(
     incomingAccessToken,
-    process.env.REFRESH_TOKEN_SECRET
+    REFRESH_TOKEN_SECRET
   );
 
   const User = await user.findById(decodedToken?._id);
@@ -229,9 +230,6 @@ const refreshAccessToken = asynchandler(async (req, res) => {
     throw new ApiError(404, "Invalid Refresh Token");
   }
 
-  if (incomingAccessToken !== User?.refreshtoken) {
-    throw new ApiError(401, "Refresh Token is Expired or used");
-  }
 
   const option = {
     httpOnly: true,
@@ -260,10 +258,10 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 
 const changeUserPassword = asynchandler(async (req, res) => {
   try {
-    const { _id } = req.query;
+    const userId = req.user._id
     const { oldPassword, newPassword } = req.body;
 
-    const User = await user.findById(_id);
+    const User = await user.findById(userId);
     if (!User) {
       throw new ApiError(401, "Invalid user");
     }
@@ -278,17 +276,21 @@ const changeUserPassword = asynchandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(ApiResponce(200, {}, "Password Changed Successfully"));
+      .json(new ApiResponce(200, {}, "Password Changed Successfully"));
   } catch (error) {
     throw new ApiError(500,"Server Error ");
   }
 });
 
 const getCurrentUser = asynchandler(async (req, res) => {
-  return res
-    .status(200)
-    .json(new ApiResponce(200, req.user, "User fetched Successfully"));
-});
+  try {
+    return res
+      .status(200)
+      .json(new ApiResponce(200, req.user, "User fetched Successfully"));
+  
+  } catch (error) {
+    throw new ApiError(500,"Server Error ");
+  }});
 
 const updateUserDetails = asynchandler(async (req, res) => {
   try {
@@ -390,7 +392,7 @@ const updateCoverImage = asynchandler(async (req, res) => {
 
 const getUserChannelProfile = asynchandler(async (req, res) => {
  try {
-   const { username } = req.query;
+   const { username } = req.params;
    if (!username?.trim) {
      throw new ApiError(401, "Username is missing!!");
    }
@@ -464,10 +466,16 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
 
 const getUserWatchHistory = asynchandler(async (req, res) => {
   try {
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new ApiError(400, "Invalid User ID");
+    }
+
     const User = await user.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId("User._id"),
+          _id: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -505,6 +513,11 @@ const getUserWatchHistory = asynchandler(async (req, res) => {
         },
       },
     ]);
+
+    if (!User.length) {
+      throw new ApiError(404, "User not found");
+    }
+
     return res
       .status(200)
       .json(
@@ -515,9 +528,10 @@ const getUserWatchHistory = asynchandler(async (req, res) => {
         )
       );
   } catch (error) {
-    throw new ApiError(500,"Error in fetching History")
+    throw new ApiError(500, "Error in fetching History");
   }
 });
+
 
 export {
   registerUser,

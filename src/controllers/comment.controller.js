@@ -6,53 +6,58 @@ import { ApiResponce } from "../utils/ApiResponse.js"
 import { asynchandler } from "../utils/asynchandler.js"
 
 const getVideoComments = asynchandler(async (req, res) => {
-    const {_id} = req.query  //VideoId
-    const {page = 1, limit = 10} = req.query
-
-    const isValidVideo = await Video.findById(_id)
-
-    if(!isValidVideo){
-        throw new ApiError(402,"Invalid Video")
-    }
-
-    const comments = await Comment.aggregate([
-        {
-            $match:{video: new mongoose.Types.ObjectId(`${_id}`)}
-        },
-        {
-            $lookup:{
-                from:"users",
-                localField:"owner",
-                foreignField:"_id",
-                as:"owner",
-                pipeline:[
-                    {
-                        $project:{
-                            username:1,
-                            fullName:1,
-                            avatar:1
-                        }
-                    }
-                ]
-            }
+    try {
+        const {videoId} = req.params  //VideoId
+        const {page = 1, limit = 10} = req.params
+    
+        const isValidVideo = await Video.findById(videoId)
+    
+        if(!isValidVideo){
+            throw new ApiError(402,"Invalid Video")
         }
-    ])
-
-    if(!comments){
-        throw new ApiError(402,"No Comments")
-    }
-
-    return res.status(200)
-    .json(new ApiResponce(200,comments,"All Video Comments"))
-})
+    
+        const comments = await Comment.aggregate([
+            {
+                $match:{video: new mongoose.Types.ObjectId(`${videoId}`)}
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    localField:"owner",
+                    foreignField:"_id",
+                    as:"owner",
+                    pipeline:[
+                        {
+                            $project:{
+                                username:1,
+                                fullName:1,
+                                avatar:1
+                            }
+                        }
+                    ]
+                }
+            }
+        ])
+    
+        if(!comments){
+            throw new ApiError(402,"No Comments")
+        }
+    
+        return res.status(200)
+        .json(new ApiResponce(200,comments,"All Video Comments"))
+    
+    } catch (error) {
+        throw new ApiError(401,"Server Error...")
+        
+    }})
 
 const addComment = asynchandler(async (req, res) => {
     try {
-        const {_id} = req.query
+        const {videoId} = req.params
         const {content}=req.body
         const userId = req.user?._id
     
-        if(!_id){
+        if(!videoId){
             throw new ApiError(402,"Invalid Video Id")
         }
         if(!content){
@@ -64,7 +69,7 @@ const addComment = asynchandler(async (req, res) => {
         
         const videoComment = await Comment.create({
             content,
-            video: _id,
+            video: videoId,
             owner:req.user?._id
         })
     
@@ -79,22 +84,26 @@ const addComment = asynchandler(async (req, res) => {
 
 const updateComment = asynchandler(async (req, res) => {
     try {
-        const {_id} = req.query //CommentId = _id
+        const {commentId} = req.params //CommentId = _id
         const {content} = req.body
+
+        if(!commentId && !content){
+            throw new ApiError(402,"All Fields Are required")
+        }
         
-        const UpdateComment = await Comment.findByIdAndUpdate(_id,
+        const UpdateComment = await Comment.findByIdAndUpdate(commentId,
             {
                 $set: {
-                    content: req.body.content
+                    content
                 }
             },
             {
                 new: true,
-            }
+            },
         )
     
         if(!UpdateComment){
-            throw new ApiError(404,"Try Again")
+            throw new ApiError(404,"Comment not Updated ,Try Again")
         }
     
         return res.status(200)
@@ -102,13 +111,14 @@ const updateComment = asynchandler(async (req, res) => {
     
     } catch (error) {
         throw new ApiError(402,"Network Issue")
-    }})
+    }
+})
 
 const deleteComment = asynchandler(async (req, res) => {
    try {
-     const {_id} = req.query
+     const {commentId} = req.params
  
-     const DeleteComment = await Comment.findByIdAndDelete(_id)
+     const DeleteComment = await Comment.findByIdAndDelete(commentId)
  
      if(!DeleteComment){
          throw new ApiError(401,"Something Went Wrong!")

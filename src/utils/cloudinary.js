@@ -1,11 +1,15 @@
 import {v2 as cloudinary} from 'cloudinary';
 import fs from 'fs'
+import {CLOUDINARY_NAME,
+    API_KEY,
+    API_SECRETE}
+    from '../constants.js'
 
           
 cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_NAME, 
-  api_key: process.env.API_KEY, 
-  api_secret: process.env.API_SECRETE 
+  cloud_name: CLOUDINARY_NAME, 
+  api_key: API_KEY, 
+  api_secret: API_SECRETE 
 });
 
 

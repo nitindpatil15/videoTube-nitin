@@ -41,15 +41,15 @@ router.route("/refresh-token").post(refreshAccessToken);
 
 router.route("/change-password").post(verifyJWT, changeUserPassword);
 
-router.route("/getUser").post(verifyJWT,getCurrentUser)
+router.route("/current-user").post(verifyJWT,getCurrentUser)
 
-router.route("/update-User").patch(verifyJWT,updateUserDetails)
+router.route("/update-account").patch(verifyJWT,updateUserDetails)
 
-router.route("/update-avatar").patch(verifyJWT,upload.single("avatar"), updateAvatar)
+router.route("/avatar").patch(verifyJWT,upload.single("avatar"), updateAvatar)
 
-router.route("/update-coverImage").patch(verifyJWT,upload.single("coverImage") ,updateCoverImage)
+router.route("/cover-image").patch(verifyJWT,upload.single("coverImage") ,updateCoverImage)
 
-router.route("/c/username").get(verifyJWT,getUserChannelProfile)
+router.route("/c/:username").get(verifyJWT,getUserChannelProfile)
 
 router.route("/watch-history").get(verifyJWT,getUserWatchHistory)
 

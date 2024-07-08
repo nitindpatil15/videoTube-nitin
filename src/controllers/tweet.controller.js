@@ -8,51 +8,56 @@ import { asynchandler } from "../utils/asynchandler.js";
 const createTweet = asynchandler(async (req, res) => {
   //TODO: create tweet
   try {
+    const userId = req.user._id;
+    if (!userId) {
+      throw new ApiError(401, "Unauthorize User");
+    }
     const { content } = req.body;
-  
+
     if (!content) {
       throw new ApiError("All Field are Required");
     }
-  
+
     const newTweet = await Tweet.create({
       content,
     });
-  
+
     newTweet.owner = req.user?._id;
     newTweet.save();
-  
+
     return res
       .status(200)
       .json(new ApiResponce(200, newTweet, "Tweet Created Successfully"));
-  
   } catch (error) {
-    throw new ApiError(500,"Server Error")
-  }});
+    throw new ApiError(500, "Server Error");
+  }
+});
 
 const getUserTweets = asynchandler(async (req, res) => {
   // TODO: get user tweets
-  const {owner} = req.query
+  const { owner } = req.params;
 
-  if(!owner){
-    throw new ApiError(401,"Id is Required")
+  if (!owner) {
+    throw new ApiError(401, "Id is Required");
   }
 
   try {
-    const tweets = await Tweet.find({owner})
-  
-    return res.status(200)
-    .json(new ApiResponce(200,{tweets},"Fetched all user tweets"))
-  
+    const tweets = await Tweet.find({ owner });
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, { tweets }, "Fetched all user tweets"));
   } catch (error) {
     throw new ApiError(500, "An error occurred while fetching the tweets");
-  }});
+  }
+});
 
 const updateTweet = asynchandler(async (req, res) => {
   try {
-    const { _id } = req.query;
+    const { tweetId } = req.params;
     const { content } = req.body;
 
-    if (!_id) {
+    if (!tweetId) {
       throw new ApiError("All Field are Required");
     }
     if (!content) {
@@ -60,7 +65,7 @@ const updateTweet = asynchandler(async (req, res) => {
     }
 
     const tweetUpdate = await Tweet.findByIdAndUpdate(
-      _id,
+      tweetId,
       {
         $set: {
           content,
@@ -83,13 +88,13 @@ const updateTweet = asynchandler(async (req, res) => {
 
 const deleteTweet = asynchandler(async (req, res) => {
   try {
-    const { _id } = req.query;
+    const { tweetId } = req.params;
 
-    if (!_id) {
+    if (!tweetId) {
       throw new ApiError(402, "Select Proper id");
     }
 
-    const TweetDelete = await Tweet.findByIdAndDelete(_id);
+    const TweetDelete = await Tweet.findByIdAndDelete(tweetId);
 
     return res
       .status(200)

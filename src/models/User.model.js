@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import {ACCESS_TOKEN_SECRET,REFRESH_TOKEN_SECRET} from '../constants.js'
 
 const UserSchema = new Schema(
   {
@@ -71,31 +72,6 @@ UserSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-// UserSchema.methods.generateAccessToken = function () {
-//   jwt.sign(
-//     {
-//       _id: this._id,
-//       email: this.email,
-//       username: this.username,
-//       fullName: this.fullName,
-//     },
-//     process.env.ACCESS_TOKEN_SECRET,
-//     {
-//       expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-//     }
-//   );
-// };
-// UserSchema.methods.generateRefreshToken = function () {
-//   jwt.sign(
-//     {
-//       _id: this._id,
-//     },
-//     process.env.REFRESH_TOKEN_SECRET,
-//     {
-//       expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-//     }
-//   );
-// };
 
 
 
@@ -111,7 +87,7 @@ UserSchema.methods.generateAccessToken = function() {
   };
 
   // Sign the access token using a secret key
-  const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '60m' }); // Adjust expiry as needed
+  const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: '60m' }); // Adjust expiry as needed
 
   return accessToken;
 };
@@ -122,7 +98,7 @@ UserSchema.methods.generateRefreshToken = function() {
   const payload = {
     _id: this._id
   };
-  const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET); 
+  const refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET); 
 
   return refreshToken;
 };

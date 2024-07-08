@@ -7,37 +7,42 @@ import { asynchandler } from "../utils/asynchandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asynchandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, owner } = req.query;
-  //TODO: get all videos based on query, sort, pagination
-  let sortCriteria = {}
-    let videoQuery = {}
-
-    if (owner) {
-        videoQuery.owner = owner
-    }
-
-    if (query) {
-        videoQuery.$or = [
-            { title: { $regex: query, $options: 'i' } },
-            { description: { $regex: query, $options: 'i' } }
-        ]
-    }
+  try {
+    const { page = 1, limit = 10, query, sortBy, sortType, owner } = req.query;
+    //TODO: get all videos based on query, sort, pagination
+    let sortCriteria = {}
+      let videoQuery = {}
+  
+      if (owner) {
+          videoQuery.owner = owner
+      }
+  
+      if (query) {
+          videoQuery.$or = [
+              { title: { $regex: query, $options: 'i' } },
+              { description: { $regex: query, $options: 'i' } }
+          ]
+      }
+      
+      if (sortBy && sortType) {
+          sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
+      }
+      
+      const videos = await Video.find(videoQuery)
+      .sort(sortCriteria)
+      .skip((page - 1) * limit)
+      .limit(limit);
+      
+      if (!videos) {
+          throw new ApiError(400, "error while fetching all videos")
+      }
+      
+      return res.status(200).json(new ApiResponce(200, videos, "videos fetched"))
+  
+  } catch (error) {
+    throw new ApiError(500,"Server Error...")
     
-    if (sortBy && sortType) {
-        sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
-    }
-    
-    const videos = await Video.find(videoQuery)
-    .sort(sortCriteria)
-    .skip((page - 1) * limit)
-    .limit(limit);
-    
-    if (!videos) {
-        throw new ApiError(400, "error while fetching all videos")
-    }
-    
-    return res.status(200).json(new ApiResponce(200, videos, "videos fetched"))
-});
+  }});
 
 const publishAVideo = asynchandler(async (req, res) => {
   try {
@@ -106,10 +111,10 @@ const publishAVideo = asynchandler(async (req, res) => {
 
 const getVideoById = asynchandler(async (req, res) => {
  try {
-   const { _id } = req.query;
+   const { videoId } = req.params;
    //TODO: change field req position
  
-   const videoById = await Video.findById(_id);
+   const videoById = await Video.findById(videoId);
  
    if (!videoById) {
      throw new ApiError("Error while fetching video");
@@ -125,10 +130,10 @@ const getVideoById = asynchandler(async (req, res) => {
 
 const updateVideo = asynchandler(async (req, res) => {
   try {
-    const {_id} = req.query;
+    const {videoId} = req.params;
     const { title, description } = req.body;
   
-    if (!_id) {
+    if (!videoId) {
       throw new ApiError("Id is required");
     }
     if (!title && !description) {
@@ -150,7 +155,7 @@ const updateVideo = asynchandler(async (req, res) => {
     }
   
     const videoUpdate = await Video.findByIdAndUpdate(
-      _id,
+      videoId,
       {
         title,
         description,
@@ -175,13 +180,13 @@ const updateVideo = asynchandler(async (req, res) => {
 
 const deleteVideo = asynchandler(async (req, res) => {
   try {
-    const { _id } = req.query;
+    const { videoId } = req.params;
   
-    if (!_id) {
+    if (!videoId) {
       throw new ApiError("Id is required");
     }
   
-    const removevideo = await Video.findByIdAndDelete(_id);
+    const removevideo = await Video.findByIdAndDelete(videoId);
   
     if(!removevideo){
       throw new ApiError("Invalid Id please check it or try again!!")
@@ -196,18 +201,36 @@ const deleteVideo = asynchandler(async (req, res) => {
   }
 });
 
-const togglePublishStatus = asynchandler(async (req, res) => {
+const videoviews = asynchandler(async(req,res)=>{
   try {
-    const { _id } = req.query;
+    const { videoId } = req.params;
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    video.views += 1;
+    await video.save();
+
+    res.status(200).json({ message: 'View count incremented', views: video.views });
+  } catch (error) {
+    res.status(500).json({ message: 'Error incrementing view count', error: error.message });
+  }
+});
+
+const togglePublishStatus = asynchandler(async (req, res) => {
+  // try {
+    const {videoId} = req.params;
   
-    if(!_id){
+    if(!videoId){
       throw new ApiError("Select proper video")
     }
   
-    const statustoggle = await Video.findById(_id)
+    const statustoggle = await Video.findById(videoId)
   
     if(!statustoggle){
-      throw new ApiError("Select proper Id")
+      throw new ApiError(401,"Select proper Id")
     }
   
     statustoggle.isPublished = !statustoggle.isPublished;
@@ -215,9 +238,9 @@ const togglePublishStatus = asynchandler(async (req, res) => {
   
     return res.status(200)
     .json(new ApiResponce(200,statustoggle,"Updated"))
-  } catch (error) {
-    throw new ApiError(500,"Error in Toggle Video")
-  }
+  // } catch (error) {
+  //   throw new ApiError(500,"Error in Toggle Video")
+  // }
 });
 
 export {
@@ -227,4 +250,5 @@ export {
   updateVideo,
   deleteVideo,
   togglePublishStatus,
+  videoviews
 };
