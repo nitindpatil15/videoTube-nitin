@@ -73,11 +73,18 @@ const registerUser = asynchandler(async (req, res) => {
       coverImageLocalpath = req.files.coverImage[0].path;
     }
 
+    if(!coverImageLocalpath){
+      throw new ApiError(400, "Cover Image is Required");
+    }
+
     // uploading Files on Cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalpath);
     const coverImage = await uploadOnCloudinary(coverImageLocalpath);
 
     if (!avatar) {
+      throw new ApiError(500, "Failed to Upload Image On Server");
+    }
+    if (!coverImage) {
       throw new ApiError(500, "Failed to Upload Image On Server");
     }
 
@@ -90,6 +97,7 @@ const registerUser = asynchandler(async (req, res) => {
       username,
       email,
     });
+    console.log(User)
 
     // Removing password and refreshToken from object
     const createdUser = await user
@@ -121,7 +129,7 @@ const loginUser = asynchandler(async (req, res) => {
     const { email, username, password } = req.body;
     // console.log(req.body);
     // if (!(username || email)) {
-    if (!username && !email) {
+    if (!(username || email)) {
       throw new ApiError(400, "Username and Email is required");
     }
 
