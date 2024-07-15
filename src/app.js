@@ -5,14 +5,21 @@ import { CORS_ORIGIN } from "./constants.js";
 
 const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    headers: ["Content-Type","auth-token", "Accept", "Accept-Language", "Accept-Encoding"],
-    Credential: true,
-  })
-);
+const corsOptions = {
+  origin: CORS_ORIGIN,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+  headers: ["Content-Type", 'Authorization', 'auth-token'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, auth-token');
+  res.header('Access-Control-Allow-Credentials', true);
+  next();
+});
+
 // Config settings In CORS() middleware
 // for setting limits on data
 app.use(express.json({ limit: "50mb" }));
@@ -20,7 +27,7 @@ app.use(express.json({ limit: "50mb" }));
 // parse incoming requests in url of browser
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
-// for any kind of static files , public is folder
+// for any kind of static files, public is folder
 app.use(express.static("public"));
 
 // Accessing cookies from user browser which can only  be accessed by server side code using the following method

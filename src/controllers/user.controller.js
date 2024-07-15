@@ -136,17 +136,11 @@ const loginUser = asynchandler(async (req, res) => {
     const UserDetail = await user.findOne({
       $or: [{ username }, { email }],
     });
-    // console.log(UserDetail);
     if (!UserDetail) {
       throw new ApiError(403, "Invalid Credentials");
     }
 
     // Password validating
-    // const isPasswordValid = await UserDetail.isPasswordCorrect(password,UserDetail.password)
-
-    // if (!isPasswordValid) {
-    //   throw new ApiError(403, "Invalid Password");
-    // }
     const passwordCompare = await bcrypt.compare(password, UserDetail.password);
     if (!passwordCompare) {
       success = false;
@@ -162,7 +156,7 @@ const loginUser = asynchandler(async (req, res) => {
       UserDetail._id
     );
     const loggedUser = await user.findById(UserDetail._id).select("-password ");
-
+    console.log("_id: ",loggedUser._id);
     const option = {
       httpOnly: true,
       secure: true,
