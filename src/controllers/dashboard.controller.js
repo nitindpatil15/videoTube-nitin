@@ -10,8 +10,9 @@ const getChannelStats = asynchandler(async (req, res) => {
     const user = req.user._id
     try {
         const totalVideos = await Video.countDocuments({owner:user});
-        const totalSubscribers = await Subscription.countDocuments({subscriber:user});
-        const totalLikes = await Like.countDocuments({user});
+        const totalSubscribers = await Subscription.countDocuments({channel:user});
+        const totalLikes = await Like.countDocuments([{ $match: { owner: user} },
+          { $group: { _id: null, total: { $sum: "$video" } } }]);
         const totalViews = await Video.aggregate([
           { $match: { owner: user} },
           { $group: { _id: null, total: { $sum: "$views" } } }

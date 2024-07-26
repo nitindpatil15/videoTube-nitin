@@ -64,27 +64,9 @@ const registerUser = asynchandler(async (req, res) => {
       throw new ApiError(400, "Avatar is Required");
     }
 
-    let coverImageLocalpath;
-    if (
-      req.files &&
-      Array.isArray(req.files.avatar) &&
-      req.files.avatar.length > 0
-    ) {
-      coverImageLocalpath = req.files.coverImage[0].path;
-    }
-
-    if(!coverImageLocalpath){
-      throw new ApiError(400, "Cover Image is Required");
-    }
-
     // uploading Files on Cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalpath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalpath);
-
     if (!avatar) {
-      throw new ApiError(500, "Failed to Upload Image On Server");
-    }
-    if (!coverImage) {
       throw new ApiError(500, "Failed to Upload Image On Server");
     }
 

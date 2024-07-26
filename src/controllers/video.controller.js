@@ -37,7 +37,7 @@ const getAllVideos = asynchandler(async (req, res) => {
           throw new ApiError(400, "error while fetching all videos")
       }
       
-      return res.status(200).json(new ApiResponce(200, videos, "videos fetched"))
+      return res.status(200).json(new ApiResponce(200, {videos,owner}, "videos fetched"))
   
   } catch (error) {
     throw new ApiError(500,"Server Error...")
